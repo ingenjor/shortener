@@ -2,14 +2,13 @@ name: Java Build and Test
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,40 +20,31 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Prepare configuration files
+      - name: Prepare configuration
         run: |
-          mkdir -p config
-          if [ ! -f config/application.yaml ]; then
-            echo "Creating default config/application.yaml..."
-            cat > config/application.yaml << 'EOF'
+          mkdir -p config logs
+          cat > config/application.yaml << 'EOF'
 app:
   name: "Shortener Service"
   version: "1.0.0"
-
 link:
   short-code-length: 7
   default-ttl-hours: 24
   default-max-clicks: 100
   generation-algorithm: "BASE62"
-
 notification:
   expire-notification: true
   limit-notification: true
-
 cleanup:
   check-interval-minutes: 5
   auto-delete-expired: true
-
 security:
   owner-only-operations: true
   user-session-ttl-hours: 168
-
 logging:
   level: INFO
   file: "logs/shortener.log"
 EOF
-          fi
-          mkdir -p logs
 
       - name: Build with Maven
         run: mvn -B clean compile
@@ -66,7 +56,7 @@ EOF
         uses: codecov/codecov-action@v4
         with:
           file: ./target/site/jacoco/jacoco.xml
-          fail_ci_if_error: false
+        fail_ci_if_error: false
 
       - name: Package JAR
         run: mvn -B package -DskipTests
