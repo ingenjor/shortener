@@ -1,0 +1,36 @@
+app:
+  name: "Shortener Service"
+  version: "1.0.0"
+
+link:
+  # Длина короткого кода (символов)
+  short-code-length: 7
+  # Время жизни ссылки (часы) - ТОЛЬКО ИЗ КОНФИГУРАЦИИ (не может быть изменено пользователем)
+  default-ttl-hours: 24
+  # Максимальный лимит переходов по умолчанию (может быть изменен пользователем)
+  default-max-clicks: 100
+  # Алгоритм генерации кода: "RANDOM", "BASE62", "HASH"
+  generation-algorithm: "BASE62"
+
+notification:
+  # Уведомлять пользователя об истечении срока
+  expire-notification: true
+  # Уведомлять пользователя о достижении лимита
+  limit-notification: true
+
+cleanup:
+  # Интервал проверки просроченных ссылок (минуты)
+  check-interval-minutes: 5
+  # Удалять ли ссылки при истечении срока
+  auto-delete-expired: true
+
+security:
+  # Разрешить редактирование только владельцу
+  owner-only-operations: true
+  # Время жизни пользовательской сессии (часы)
+  user-session-ttl-hours: 168  # 7 дней
+
+logging:
+  level: INFO
+  file: "logs/shortener.log"
+
