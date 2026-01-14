@@ -44,7 +44,7 @@ security:
 logging:
   level: INFO
   file: "logs/shortener.log"
-'EOF'
+EOF
 
       - name: Build with Maven
         run: mvn -B clean compile
