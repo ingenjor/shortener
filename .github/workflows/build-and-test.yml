@@ -1,4 +1,4 @@
-name: Java CI
+name: Java Build and Test
 
 on:
   push:
@@ -7,71 +7,85 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      # 1. Получаем код из репозитория
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      # 2. Устанавливаем Java и настраиваем кэш Maven
       - name: Set up JDK 11
-        uses: actions/setup-java@v3
+        uses: actions/setup-java@v4
         with:
           java-version: '11'
           distribution: 'temurin'
           cache: maven
 
-      - name: Validate configuration
+      # 3. Создаем необходимые конфигурационные файлы, если их нет
+      - name: Prepare configuration files
         run: |
           mkdir -p config
           if [ ! -f config/application.yaml ]; then
-            echo "Creating default config..."
-            cat > config/application.yaml << EOF
-          app:
-            name: "Shortener Service"
-            version: "1.0.0"
-          
-          link:
-            short-code-length: 7
-            default-ttl-hours: 24
-            default-max-clicks: 100
-            generation-algorithm: "BASE62"
-          
-          notification:
-            expire-notification: true
-            limit-notification: true
-          
-          cleanup:
-            check-interval-minutes: 5
-            auto-delete-expired: true
-          
-          security:
-            owner-only-operations: true
-            user-session-ttl-hours: 168
-          
-          logging:
-            level: INFO
-            file: "logs/shortener.log"
-          EOF
-          fi
+            echo "Creating default config/application.yaml..."
+            cat > config/application.yaml << 'EOF'
+app:
+  name: "Shortener Service"
+  version: "1.0.0"
 
+link:
+  short-code-length: 7
+  default-ttl-hours: 24
+  default-max-clicks: 100
+  generation-algorithm: "BASE62"
+
+notification:
+  expire-notification: true
+  limit-notification: true
+
+cleanup:
+  check-interval-minutes: 5
+  auto-delete-expired: true
+
+security:
+  owner-only-operations: true
+  user-session-ttl-hours: 168
+
+logging:
+  level: INFO
+  file: "logs/shortener.log"
+EOF
+          fi
+          # Создаем папку для логов, чтобы избежать ошибок
+          mkdir -p logs
+
+      # 4. Сборка проекта
       - name: Build with Maven
         run: mvn -B clean compile
 
-      - name: Run tests with coverage
+      # 5. Запуск тестов и генерация отчета о покрытии
+      - name: Run tests and generate coverage
         run: mvn -B test jacoco:report
 
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+      # 6. Загрузка отчета о покрытии на Codecov (опционально)
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
         with:
           file: ./target/site/jacoco/jacoco.xml
-          flags: unittests
-          name: codecov-umbrella
+          fail_ci_if_error: false  # Не проваливать сборку при ошибке загрузки
 
-      - name: Package application
+      # 7. Создание исполняемого JAR-файла
+      - name: Package JAR
         run: mvn -B package -DskipTests
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v3
+      # 8. Публикация JAR-файла как артефакт сборки
+      - name: Upload JAR artifact
+        uses: actions/upload-artifact@v4
         with:
           name: shortener-service
           path: target/*.jar
+
+      # 9. Дополнительная проверка: показываем структуру проекта
+      - name: Show project structure
+        run: find . -type f -name "*.jar" -o -name "pom.xml" -o -name "*.yaml" | head -20
