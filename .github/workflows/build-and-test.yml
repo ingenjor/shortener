@@ -11,67 +11,95 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up JDK 11
-      uses: actions/setup-java@v3
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-        cache: maven
-    
-    - name: Validate configuration
-      run: |
-        mkdir -p config
-        if [ ! -f config/application.yaml ]; then
-          echo "Creating default config..."
-          cat > config/application.yaml << EOF
-        app:
-          name: "Shortener Service"
-          version: "1.0.0"
-        
-        link:
-          short-code-length: 7
-          default-ttl-hours: 24
-          default-max-clicks: 100
-          generation-algorithm: "BASE62"
-        
-        notification:
-          expire-notification: true
-          limit-notification: true
-        
-        cleanup:
-          check-interval-minutes: 5
-          auto-delete-expired: true
-        
-        security:
-          owner-only-operations: true
-          user-session-ttl-hours: 168
-        
-        logging:
-          level: INFO
-          file: "logs/shortener.log"
-        EOF
-        fi
-    
-    - name: Build with Maven
-      run: mvn -B clean compile
-      
-    - name: Run tests with coverage
-      run: mvn -B test jacoco:report
-      
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./target/site/jacoco/jacoco.xml
-        flags: unittests
-        name: codecov-umbrella
-        
-    - name: Package application
-      run: mvn -B package -DskipTests
-      
-    - name: Upload artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: shortener-service
-        path: target/*.jar
+      # Шаг 1: Получение кода репозитория
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Шаг 2: Установка Java JDK 11
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      # Шаг 3: Проверка и создание конфигурационного файла
+      - name: Validate and create configuration
+        run: |
+          mkdir -p config
+          if [ ! -f config/application.yaml ]; then
+            echo "Создание конфигурационного файла по умолчанию..."
+            cat > config/application.yaml << 'EOF'
+          app:
+            name: "Shortener Service"
+            version: "1.0.0"
+
+          link:
+            short-code-length: 7
+            default-ttl-hours: 24
+            default-max-clicks: 100
+            generation-algorithm: "BASE62"
+
+          notification:
+            expire-notification: true
+            limit-notification: true
+
+          cleanup:
+            check-interval-minutes: 5
+            auto-delete-expired: true
+
+          security:
+            owner-only-operations: true
+            user-session-ttl-hours: 168
+
+          logging:
+            level: INFO
+            file: "logs/shortener.log"
+          EOF
+            echo "Конфигурационный файл создан успешно."
+          else
+            echo "Конфигурационный файл уже существует."
+          fi
+
+      # Шаг 4: Сборка проекта Maven
+      - name: Build with Maven
+        run: mvn -B clean compile
+
+      # Шаг 5: Запуск тестов с покрытием кода
+      - name: Run tests with coverage
+        run: mvn -B test jacoco:report
+
+      # Шаг 6: Загрузка отчета о покрытии в Codecov
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./target/site/jacoco/jacoco.xml
+          flags: unittests
+          name: codecov-umbrella
+
+      # Шаг 7: Создание JAR-пакета (пропуская тесты)
+      - name: Package application
+        run: mvn -B package -DskipTests
+
+      # Шаг 8: Загрузка собранного JAR-файла как артефакт
+      - name: Upload JAR artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shortener-service-jar
+          path: target/*.jar
+          retention-days: 7
+
+      # Шаг 9: Отправка уведомления об успешной сборке (опционально)
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✅ Сборка и тесты успешно завершены!"
+          echo "JAR-файл загружен как артефакт 'shortener-service-jar'"
+
+      # Шаг 10: Отправка уведомления об ошибке (опционально)
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "❌ Сборка или тесты завершились с ошибкой"
+          echo "Пожалуйста, проверьте логи выше для диагностики проблемы"
